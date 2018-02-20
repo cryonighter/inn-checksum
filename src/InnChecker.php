@@ -4,7 +4,7 @@ namespace Cryonighter\InnChecksum;
 
 class InnChecker
 {
-    private const WEIGHT_INDIVIDUAL = [7, 2, 4, 10, 3, 5, 9, 4, 6, 8, 0];
+    private const WEIGHT_INDIVIDUAL = [3, 7, 2, 4, 10, 3, 5, 9, 4, 6, 8, 0];
     private const WEIGHT_LEGAL = [2, 4, 10, 3, 5, 9, 4, 6, 8, 0];
 
     /**
@@ -31,11 +31,20 @@ class InnChecker
      */
     public static function checkIndividual(string $inn): bool
     {
-        if (preg_match('/^\d{12}$/', $inn)) {
-            return true;
+        if (!preg_match('/^\d{12}$/', $inn)) {
+            return false;
         }
 
-        return false;
+        $innChars = str_split($inn);
+
+        $checksumOne = static::getChecksum(
+            array_slice($innChars, 0, 11),
+            array_slice(self::WEIGHT_INDIVIDUAL, 1)
+        );
+
+        $checksumTwo = static::getChecksum($innChars,self::WEIGHT_INDIVIDUAL);
+
+        return ($checksumOne % 11 % 10 == $inn[10]) && ($checksumTwo % 11 % 10 == $inn[11]);
     }
 
     /**
@@ -49,16 +58,30 @@ class InnChecker
             return false;
         }
 
-        $checksum = array_sum(
-            array_map(
-                function(int $innChar, int $weight): int {
-                    return $innChar * $weight;
-                },
-                str_split($inn, 1),
-                self::WEIGHT_LEGAL
-            )
+        $checksum = static::getChecksum(
+            str_split($inn),
+            self::WEIGHT_LEGAL
         );
 
         return $inn[9] == $checksum % 11 % 10;
+    }
+
+    /**
+     * @param array $innChars
+     * @param array $weights
+     *
+     * @return int
+     */
+    protected static function getChecksum(array $innChars, array $weights): int
+    {
+        return array_sum(
+            array_map(
+                function (int $innChar, int $weight): int {
+                    return $innChar * $weight;
+                },
+                $innChars,
+                $weights
+            )
+        );
     }
 }
